@@ -399,23 +399,33 @@ std::string render_vsSource = TO_STRING(
          }
   );
 
-std::string render_fsSource = TO_STRING(
-         varying vec2 vTextureCoord;
-         uniform sampler2D uTexture;
-         void main(void)
-         {
-            gl_FragColor = texture2D(uTexture, vTextureCoord);
-         }
-  );
+std::string render_fsSource = 
+"#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+"varying highp vec2 vTextureCoord;\n"
+"uniform highp sampler2D uTexture;\n"
+"#else\n"
+"varying lowp vec2 vTextureCoord;\n"
+"uniform lowp sampler2D uTexture;\n"
+"#endif\n"
+"void main(void)\n"
+"{\n"
+"gl_FragColor = texture2D(uTexture, vTextureCoord);\n"
+"}\n";
 #else
 std::string vsSource = "void main() { gl_Position = ftransform(); }";
 #endif
 
 std::string fsHeader =
-"#ifdef GL_ES\n"
-"precision highp float;\n"
-"#endif\n"
 "#extension GL_OES_standard_derivatives : enable\n"
+"#ifdef GL_ES\n"
+"#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+"precision highp float;\n"
+"precision highp sampler2D;\n"
+"#else\n"
+"precision lowp float;\n"
+"precision lowp sampler2D;\n"
+"#endif\n"
+"#endif\n"
 "uniform vec3      iResolution;\n"
 "uniform float     iGlobalTime;\n"
 "uniform float     iChannelTime[4];\n"
