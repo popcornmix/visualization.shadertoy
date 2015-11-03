@@ -1,4 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <settings>
     <setting id="lastpresetidx" type="integer" default="0" visible="false" />
+    <setting id="lastactiveidx" type="integer" default="0" visible="false" />
+    <setting id="lastfilehash" type="integer" default="0" visible="false" />
+    <setting id="randomise" label="30000" type="bool" default="false"/>
 </settings>

@@ -44,6 +44,8 @@
 #include "kiss_fft.h"
 #include "lodepng.h"
 
+static void launch(int preset);
+
 using namespace std;
 
 string g_pathPresets;
@@ -117,7 +119,12 @@ const std::vector<Preset> g_presets =
 #endif
 
 int g_currentPreset = 0;
+int g_lastPreset = -1;
+int g_lastFileHash = 0;
+int g_activePreset = 0;
 char** lpresets = nullptr;
+bool randomise = false;
+bool newtrack = false;
 
 const char *g_fileTextures[] = {
   "tex00.png",
@@ -169,6 +176,25 @@ void LogProps(VIS_PROPS *props) {
        << "}" << endl;
 }
 
+static int quickhash(const char *str)
+{
+    int hash = 5381;
+    int c;
+
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c;
+
+    return hash;
+}
+
+static void update_filename(const char *filename)
+{
+  int hash = quickhash(filename);
+  if (g_lastFileHash && g_lastFileHash != hash)
+    newtrack = true;
+  g_lastFileHash = hash;
+}
+
 void LogTrack(VisTrack *track) {
   cout << "Track = {" << endl
        << "\t title: " << track->title << endl
@@ -184,6 +210,7 @@ void LogTrack(VisTrack *track) {
        << "\t year: " << track->year << endl
        << "\t rating: " << track->rating << endl
        << "}" << endl;
+      update_filename(track->title);
 }
 
 void LogAction(const char *message) {
@@ -629,7 +656,7 @@ static void RenderTo(GLuint shader, GLuint effect_fb)
 
     if (needsUpload) {
       for (int i=0; i<4; i++) {
-        if (g_presets[g_currentPreset].channel[i] == 99) {
+        if (g_presets[g_activePreset].channel[i] == 99) {
           glActiveTexture(GL_TEXTURE0 + i);
           glBindTexture(GL_TEXTURE_2D, iChannel[i]);
           glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, NUM_BANDS, 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, audio_data);
@@ -714,6 +741,18 @@ static void RenderTo(GLuint shader, GLuint effect_fb)
 //-----------------------------------------------------------------------------
 extern "C" void Render()
 {
+   if (newtrack && randomise)
+     do {
+       g_activePreset = (int)((std::rand() / (float)RAND_MAX) * g_presets.size());
+     } while (g_activePreset == g_lastPreset);
+   else if (newtrack)
+     g_activePreset = g_currentPreset;
+   newtrack = false;
+
+  if (g_activePreset != g_lastPreset)
+    launch(g_activePreset);
+  g_lastPreset = g_activePreset;
+
   glGetError();
   //cout << "Render" << std::endl;
   if (initialized) {
@@ -855,6 +894,7 @@ static void launch(int preset)
 extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, const char* szSongName)
 {
   cout << "Start " << iChannels << " " << iSamplesPerSec << " " << iBitsPerSample << " " << szSongName << std::endl;
+  update_filename(szSongName);
   samplesPerSec = iSamplesPerSec;
 }
 
@@ -946,25 +986,23 @@ extern "C" unsigned int GetSubModules(char ***names)
 //-----------------------------------------------------------------------------
 extern "C" bool OnAction(long flags, const void *param)
 {
-  cout << "OnAction" << std::endl;
+  cout << "OnAction " << flags << std::endl;
   switch (flags)
   {
     case VIS_ACTION_NEXT_PRESET:
       LogAction("VIS_ACTION_NEXT_PRESET");
       g_currentPreset = (g_currentPreset + 1)  % g_presets.size();
-      launch(g_currentPreset);
       return true;
     case VIS_ACTION_PREV_PRESET:
       LogAction("VIS_ACTION_PREV_PRESET");
       g_currentPreset = (g_currentPreset - 1)  % g_presets.size();
-      launch(g_currentPreset);
       return true;
     case VIS_ACTION_LOAD_PRESET:
       LogAction("VIS_ACTION_LOAD_PRESET"); // TODO param is int *
       if (param)
       {
         g_currentPreset = *(int *)param % g_presets.size();
-        launch(g_currentPreset);
+        newtrack = true;
         return true;
       }
 
@@ -972,7 +1010,6 @@ extern "C" bool OnAction(long flags, const void *param)
     case VIS_ACTION_RANDOM_PRESET:
       LogAction("VIS_ACTION_RANDOM_PRESET");
       g_currentPreset = (int)((std::rand() / (float)RAND_MAX) * g_presets.size());
-      launch(g_currentPreset);
       return true;
 
     case VIS_ACTION_LOCK_PRESET:
@@ -1196,6 +1233,16 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
     }
     if (strcmp((char*)value, "1") == 0)
     {
+      strcpy((char*)strSetting, "lastactiveidx");
+      sprintf ((char*)value, "%i", (int)g_activePreset);
+    }
+    if (strcmp((char*)value, "2") == 0)
+    {
+      strcpy((char*)strSetting, "lastfilehash");
+      sprintf ((char*)value, "%i", (int)g_lastFileHash);
+    }
+    if (strcmp((char*)value, "3") == 0)
+    {
       strcpy((char*)strSetting, "###End");
     }
 
@@ -1206,7 +1253,24 @@ extern "C" ADDON_STATUS ADDON_SetSetting(const char *strSetting, const void* val
   {
     cout << "lastpresetidx = " << *((int *)value) << endl;
     g_currentPreset = *(int *)value % g_presets.size();
-    launch(g_currentPreset);
+    return ADDON_STATUS_OK;
+  }
+  if (strcmp(strSetting, "lastactiveidx") == 0)
+  {
+    cout << "lastactiveidx = " << *((int *)value) << endl;
+    g_activePreset = *(int *)value % g_presets.size();
+    return ADDON_STATUS_OK;
+  }
+  if (strcmp(strSetting, "lastfilehash") == 0)
+  {
+    cout << "lastfilehash = " << *((int *)value) << endl;
+    g_lastFileHash = *(int *)value;
+    return ADDON_STATUS_OK;
+  }
+  if (strcmp(strSetting, "randomise") == 0)
+  {
+    randomise = (int) *(char *)value;
+    cout << "randomise = " << randomise << endl;
     return ADDON_STATUS_OK;
   }
 
