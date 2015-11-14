@@ -156,6 +156,7 @@ struct
   GLuint render_program;
   GLuint uScale;
   int fbwidth, fbheight;
+  GLint viewport[4];
 } state_g, *state = &state_g;
 #endif
 
@@ -704,6 +705,10 @@ static void RenderTo(GLuint shader, GLuint effect_fb)
   }
 
 #if defined(HAS_GLES)
+  // default viewport
+  if (effect_fb)
+    glViewport(0, 0, state->fbwidth, state->fbheight);
+
   // Draw the effect to a texture or direct to framebuffer
   glBindFramebuffer(GL_FRAMEBUFFER, effect_fb);
 
@@ -714,6 +719,8 @@ static void RenderTo(GLuint shader, GLuint effect_fb)
   glDrawArrays( GL_TRIANGLE_FAN, 0, 4 );
   glDisableVertexAttribArray(attr_vertex);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+  if (effect_fb)
+    glViewport(state->viewport[0], state->viewport[1], state->viewport[2], state->viewport[3]);
 #else
   glBegin(GL_QUADS);
     glVertex3f(-1.0f, 1.0f, 0.0f);
@@ -857,6 +864,9 @@ static double measure_performance(int preset, int size)
 
 static void launch(int preset)
 {
+  //get current viewport
+  glGetIntegerv(GL_VIEWPORT, state->viewport);
+
   bits_precision = determine_bits_precision();
   // mali-400 has only 10 bits which means milliseond timer wraps after ~1 second.
   // we'll fudge that up a bit as having a larger range is more important than ms accuracy
