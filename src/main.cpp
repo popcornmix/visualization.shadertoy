@@ -121,7 +121,7 @@ const std::vector<Preset> g_presets =
 int g_currentPreset = 0;
 int g_lastPreset = -1;
 int g_lastFileHash = 0;
-int g_activePreset = 0;
+int g_activePreset = -1;
 char** lpresets = nullptr;
 bool randomise = false;
 bool newtrack = false;
@@ -628,6 +628,7 @@ static uint64_t GetTimeStamp() {
 
 static void RenderTo(GLuint shader, GLuint effect_fb)
 {
+  assert(g_activePreset >= 0 && g_activePreset < g_presets.size());
   glUseProgram(shader);
 
 #if !defined(HAS_GLES)
@@ -757,6 +758,8 @@ extern "C" void Render()
    else if (newtrack)
      g_activePreset = g_currentPreset;
    newtrack = false;
+  if (g_activePreset < 0)
+    return;
 
   if (g_activePreset != g_lastPreset)
     launch(g_activePreset);
@@ -906,7 +909,6 @@ static void launch(int preset)
 extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, const char* szSongName)
 {
   cout << "Start " << iChannels << " " << iSamplesPerSec << " " << iBitsPerSample << " " << szSongName << std::endl;
-  update_filename(szSongName);
   samplesPerSec = iSamplesPerSec;
 }
 
@@ -1014,7 +1016,6 @@ extern "C" bool OnAction(long flags, const void *param)
       if (param)
       {
         g_currentPreset = *(int *)param % g_presets.size();
-        newtrack = true;
         return true;
       }
 
