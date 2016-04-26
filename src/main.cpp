@@ -1017,6 +1017,7 @@ extern "C" bool OnAction(long flags, const void *param)
       if (param)
       {
         g_currentPreset = *(int *)param % g_presets.size();
+        newtrack = !randomise;
         return true;
       }
 
