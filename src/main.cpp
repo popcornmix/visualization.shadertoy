@@ -86,7 +86,8 @@ const std::vector<Preset> g_presets =
    {"Audio Fl0wer by daek",                     "audioflower.frag.glsl",            99, -1, -1, -1},
    {"Sine Waves by popcornmix",                 "sinewaves.frag.glsl",              99, -1, -1, -1},
    {"Alhambra on LSD by mfagerlund",            "alhambra.frag.glsl",               99, -1, -1, -1},
-   {"Colorspace by bloxard",                    "colorspace.frag.glsl",             99, -1, -1, -1}};
+   {"Colorspace by bloxard",                    "colorspace.frag.glsl",             99, -1, -1, -1},
+   {"Disco Transforms by seb0fh",               "discotransforms.frag.glsl",        99, -1, -1, -1}};
 #else
 const std::vector<Preset> g_presets =
   {
