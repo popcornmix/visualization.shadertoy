@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 find_package(kodi REQUIRED)
+find_package(p8-platform REQUIRED)
 
 find_package(OpenGL)
 if(OPENGL_FOUND)
@@ -26,6 +27,7 @@ endif()
 
 include_directories(${INCLUDES}
                     ${KODI_INCLUDE_DIR}
+                    ${p8-platform_INCLUDE_DIRS}
                     ${PROJECT_SOURCE_DIR}/lib/kissfft
                     ${CMAKE_INCLUDE_PATH})
 

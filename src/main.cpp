@@ -18,7 +18,8 @@
  *
  */
 
-#include "kodi/xbmc_vis_dll.h"
+#include "xbmc_vis_dll.h"
+#include "xbmc_vis_types.h"
 #if defined(HAS_GLES)
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
@@ -34,7 +35,7 @@
 #include <fstream>
 #include <streambuf>
 #include <ctime>
-#include "platform/util/timeutils.h"
+#include <p8-platform/util/timeutils.h>
 #include <math.h>
 #include <complex.h>
 #include <limits.h>
@@ -164,7 +165,7 @@ struct
 int g_numberTextures = 17;
 GLint g_textures[17] = { };
 
-void LogProps(VIS_PROPS *props) {
+void LogProps(AddonProps_Visualization *props) {
   cout << "Props = {" << endl
        << "\t x: " << props->x << endl
        << "\t y: " << props->y << endl
@@ -618,7 +619,7 @@ void loadPreset(int preset, std::string vsSource, std::string fsSource)
   glBindFramebuffer(GL_FRAMEBUFFER, state->effect_fb);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, state->framebuffer_texture, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  initial_time = PLATFORM::GetTimeMs();
+  initial_time = P8PLATFORM::GetTimeMs();
 }
 
 static uint64_t GetTimeStamp() {
@@ -655,7 +656,7 @@ static void RenderTo(GLuint shader, GLuint effect_fb)
     if (state->fbwidth && state->fbheight)
       w = state->fbwidth, h = state->fbheight;
 #endif
-    int64_t intt = PLATFORM::GetTimeMs() - initial_time;
+    int64_t intt = P8PLATFORM::GetTimeMs() - initial_time;
     if (bits_precision)
       intt &= (1<<bits_precision)-1;
 
@@ -857,8 +858,8 @@ static double measure_performance(int preset, int size)
 #endif
     glFinish();
     if (++iterations == 0)
-      start = PLATFORM::GetTimeMs();
-    end = PLATFORM::GetTimeMs();
+      start = P8PLATFORM::GetTimeMs();
+    end = P8PLATFORM::GetTimeMs();
   } while (end - start < 50);
   double t = (double)(end - start)/iterations;
   //printf("%s %dx%d %.1fms = %.2f fps\n", __func__, size, size, t, 1000.0/t);
@@ -911,6 +912,11 @@ extern "C" void Start(int iChannels, int iSamplesPerSec, int iBitsPerSample, con
 {
   cout << "Start " << iChannels << " " << iSamplesPerSec << " " << iBitsPerSample << " " << szSongName << std::endl;
   samplesPerSec = iSamplesPerSec;
+}
+
+extern "C" void Stop()
+{
+  cout << "Stop" << std::endl;
 }
 
 void Mix(float *destination, const float *source, size_t frames, size_t channels)
@@ -1091,7 +1097,7 @@ extern "C" bool IsLocked()
 ADDON_STATUS ADDON_Create(void* hdl, void* props)
 {
   cout << "ADDON_Create" << std::endl;
-  VIS_PROPS *p = (VIS_PROPS *)props;
+  AddonProps_Visualization *p = (AddonProps_Visualization *)props;
 
   LogProps(p);
 
@@ -1132,15 +1138,6 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     return ADDON_STATUS_UNKNOWN;
 
   return ADDON_STATUS_NEED_SAVEDSETTINGS;
-}
-
-//-- Stop ---------------------------------------------------------------------
-// This dll must cease all runtime activities
-// !!! Add-on master function !!!
-//-----------------------------------------------------------------------------
-extern "C" void ADDON_Stop()
-{
-  cout << "ADDON_Stop" << std::endl;
 }
 
 //-- Destroy ------------------------------------------------------------------
